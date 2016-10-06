@@ -2,14 +2,19 @@ require 'pry'
 
 BOARD_SIZE = 3
 BOARD_AREA = BOARD_SIZE**2
-MARKER = { "player" => "X", "computer" => "O" }.freeze
+MARKER = { "player" => "\e[31mX\e[0m",
+           "computer" => "\e[34mO\e[0m" }.freeze
 
 def prompt(message)
-  puts "==> #{message}"
+  puts "\e[32m==> #{message}\e[0m"
 end
 
 def empty_squares(board)
   board.each_index.select { |square| board[square] == " " }
+end
+
+def empty_squares_string(board)
+  empty_squares(board).map { |index| (index + 1) }.join(", ")
 end
 
 def alter_turn(turn)
@@ -19,10 +24,6 @@ end
 def valid_input?(position)
   return false unless position.to_i.to_s == position
   (1..BOARD_AREA).cover?(position.to_i) ? true : false
-end
-
-def empty_squares_string(board)
-  empty_squares(board).map { |index| (index + 1) }.join(", ")
 end
 
 def validate_input(board, input)
@@ -38,18 +39,22 @@ def validate_input(board, input)
   end
 end
 
-def display_line(board, line)
-  puts "|" + ("     |" * BOARD_SIZE)
+def display_positions(board, line)
   BOARD_SIZE.times do |square|
     print "|" + "  #{board[(square + (BOARD_SIZE * line))]}  "
   end
+end
+
+def display_line(board, line)
+  puts " " + ("_____ " * BOARD_SIZE) if line == 0
+  puts "|" + ("     |" * BOARD_SIZE)
+  display_positions(board, line)
   print "|\n"
   puts "|" + ("_____|" * BOARD_SIZE) unless line == BOARD_SIZE
 end
 
 def display_board(board)
   system "clear"
-  puts " " + ("_____ " * BOARD_SIZE)
   BOARD_SIZE.times do |line|
     display_line(board, line)
   end
@@ -83,15 +88,15 @@ def game_sub_nodes(brd, n, turn, brd_state)
     board = brd.dup
     board[square] = MARKER[turn]
     (brd_state[n][brd]['state'] << board.dup).flatten
-    brd_state[n][brd]['score'] << calc_score(board)
+    brd_state[n][brd]['score'] << calc_node_score(board)
   end
   brd_state
 end
 
-def calc_score(brd)
+def calc_node_score(brd)
   winner = winner(brd)
-  return -1 if winner == 'X'
-  return 1 if winner == 'O'
+  return -1 if winner == MARKER["player"]
+  return 1 if winner == MARKER["computer"]
   return nil if brd.include?(" ")
   0
 end
@@ -205,13 +210,15 @@ while continue_play
     winner = "Computer" if winner(board)
   end
 
-  puts winner == " " ? "Tie Game \n\n" : "#{winner} wins !!!\n\n"
+  prompt winner == " " ? "Tie Game \n" : "#{winner} wins !!!\n"
   game_score = track_score(winner, game_score)
-  puts "Computer: #{game_score['Computer']}, Player: #{game_score['Player']},"\
-        " Tie:  #{game_score['tie']}\n\n"
+  prompt "Computer: #{game_score['Computer']},"\
+       " Player: #{game_score['Player']},"\
+       " Tie:  #{game_score['tie']} \n"
 
   prompt "Enter y to play again or any other key to exit game."
   answer = gets.chomp.downcase
   continue_play = false unless answer.start_with?('y')
 end
+
 prompt "Good Bye!"
